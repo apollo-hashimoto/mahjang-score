@@ -5,100 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>麻雀点数表アプリ</title>
     <style>
-        /* --- 基礎設定 (横揺れ防止の根本治療) --- */
         * { box-sizing: border-box; }
         
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
-            overflow-x: hidden; /* HTML/BODYレベルで横揺れをカット */
-            -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかに */
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
         }
 
-        /* アプリ全体を囲むコンテナ。ここに余白を持たせる */
+        /* 画面の端ギリギリまで表を広げるために余白を小さく */
         .app-container {
             font-family: sans-serif;
-            padding: 10px;
+            padding: 4px;
             font-size: 14px;
             width: 100%;
         }
         
-        h1 { font-size: 18px; text-align: center; margin-top: 5px; margin-bottom: 15px; }
+        h1 { font-size: 16px; text-align: center; margin-top: 5px; margin-bottom: 10px; }
         
-        /* --- タブのデザイン --- */
         .tabs { display: flex; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
-        .tab { padding: 8px 12px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-bottom: none; margin: 2px; border-radius: 5px 5px 0 0; }
+        .tab { padding: 8px 10px; font-size: 13px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-bottom: none; margin: 2px; border-radius: 5px 5px 0 0; }
         .tab.active { background: #fff; font-weight: bold; border-top: 3px solid #4CAF50; border-bottom: 1px solid #fff; }
         
-        /* --- 表のデザイン --- */
+        /* 表が横スクロールしないように設定を変更 */
         .table-container { 
             width: 100%; 
-            overflow-x: auto; /* 表は横スクロール可能に */
             margin-bottom: 20px; 
-            padding-bottom: 5px; 
-            border: 1px solid #eee; /* テーブルがはみ出てる感を出す */
         }
-        table { border-collapse: collapse; width: 100%; min-width: 450px; table-layout: fixed; } /* 列幅を固定 */
-        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: top; height: 50px; }
-        th { background-color: #f9f9f9; font-size: 12px; vertical-align: middle; }
         
-        /* 入力欄の基本デザイン */
+        /* 画面幅に強制的に合わせる（min-widthを削除） */
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; } 
+        
+        /* セル内の余白を極限まで削ってスペースを確保 */
+        th, td { border: 1px solid #aaa; padding: 1px; text-align: center; vertical-align: top; height: 45px; }
+        th { background-color: #f9f9f9; font-size: 10px; vertical-align: middle; }
+        
+        /* 入力欄の文字サイズと余白を小さくして収める */
         input { 
             width: 100%; 
             height: 35px;
-            padding: 0 2px; 
-            font-size: 16px; /* 16px以上にするとiOSでオートズームしない */
+            padding: 0; 
+            font-size: 13px; 
             text-align: center; 
             border: 1px solid #ccc; 
             border-radius: 4px; 
-            -webkit-appearance: none; /* iOSデフォルトデザインをOFF */
+            -webkit-appearance: none; 
         }
         
-        /* --- 存在しないセル（斜め1本線）のデザイン --- */
         .disabled-cell-container {
             position: relative;
             width: 100%;
             height: 100%;
-            background-color: #eee; /* 薄いグレーの背景 */
+            background-color: #eee;
             border-radius: 4px;
         }
-        /* 疑似要素で斜め1本線を引く */
         .disabled-cell-container::after {
             content: '';
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            /* 左上から右下へ、888色の1pxの線を引くグラデーション */
             background: linear-gradient(to bottom right, transparent calc(50% - 0.5px), #888 calc(50% - 0.5px), #888 calc(50% + 0.5px), transparent calc(50% + 0.5px));
             pointer-events: none;
         }
 
-        /* --- 子ツモ用の分割入力デザイン --- */
         .tsumo-input-wrap {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 0;
         }
-        .split-input { display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%; }
-        .split-input input { width: 45%; }
-        /* 「子 / 親」のラベル */
-        .split-input-label { font-size: 10px; color: #777; margin-top: -1px; }
+        /* 子ツモのスキマをさらに削る */
+        .split-input { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .split-input input { width: 47%; font-size: 12px; } /* 分割時はさらに文字を少し小さく */
+        .split-input span { font-size: 10px; }
         
-        /* --- 正解・不正解時の色 --- */
+        .split-input-label { font-size: 9px; color: #777; margin-top: 1px; transform: scale(0.9); }
+        
         .correct { background-color: #c8e6c9; border-color: #4CAF50; }
         .incorrect { background-color: #ffcdd2; border-color: #f44336; }
-        .ans-text { display: block; font-size: 11px; color: #d32f2f; margin-top: 4px; font-weight: bold; min-height: 14px; line-height: 1.1; }
+        .ans-text { display: block; font-size: 10px; color: #d32f2f; margin-top: 2px; font-weight: bold; min-height: 12px; line-height: 1.1; }
         
-        /* --- 答え合わせボタンのデザイン --- */
         button { 
             display: block; 
             width: 100%; 
             max-width: 300px; 
-            margin: 30px auto 0; /* 上に多めの余白 */
-            padding: 15px; 
-            font-size: 18px; 
+            margin: 20px auto 0; 
+            padding: 12px; 
+            font-size: 16px; 
             font-weight: bold; 
             background-color: #2196F3; 
             color: white; 
@@ -106,13 +101,12 @@
             border-radius: 8px; 
             cursor: pointer; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            -webkit-tap-highlight-color: transparent; /* タップ時の青ハイライトをOFF */
+            -webkit-tap-highlight-color: transparent; 
         }
         button:active { transform: translateY(2px); box-shadow: none; background-color: #1E88E5; }
 
-        /* --- ボタン下の巨大な空き地 (スペーサー) --- */
         .spacer {
-            height: 60vh; /* 画面高さの60%分の空き地を作る */
+            height: 60vh;
             width: 100%;
         }
     </style>
@@ -132,11 +126,11 @@
         <div class="table-container">
             <table>
                 <colgroup>
-                    <col style="width: 15%;">
-                    <col style="width: 21%;">
-                    <col style="width: 21%;">
-                    <col style="width: 21%;">
-                    <col style="width: 21%;">
+                    <col style="width: 14%;">
+                    <col style="width: 21.5%;">
+                    <col style="width: 21.5%;">
+                    <col style="width: 21.5%;">
+                    <col style="width: 21.5%;">
                 </colgroup>
                 <thead>
                     <tr>
@@ -158,7 +152,6 @@
     </div>
 
     <script>
-        // 完全な点数データ
         const scores = {
             'ko_ron': { 20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" }, 25: { 1: "なし", 2: "1600", 3: "3200", 4: "6400" }, 30: { 1: "1000", 2: "2000", 3: "3900", 4: "7700" }, 40: { 1: "1300", 2: "2600", 3: "5200", 4: "8000" }, 50: { 1: "1600", 2: "3200", 3: "6400", 4: "8000" }, 60: { 1: "2000", 2: "3900", 3: "7700", 4: "8000" }, 70: { 1: "2300", 2: "4500", 3: "8000", 4: "8000" }, 80: { 1: "2600", 2: "5200", 3: "8000", 4: "8000" }, 90: { 1: "2900", 2: "5800", 3: "8000", 4: "8000" }, 100: { 1: "3200", 2: "6400", 3: "8000", 4: "8000" }, 110: { 1: "3600", 2: "7100", 3: "8000", 4: "8000" } },
             'ko_tsumo': { 20: { 1: "なし", 2: "400/700", 3: "700/1300", 4: "1300/2600" }, 25: { 1: "なし", 2: "なし", 3: "800/1600", 4: "1600/3200" }, 30: { 1: "300/500", 2: "500/1000", 3: "1000/2000", 4: "2000/3900" }, 40: { 1: "400/700", 2: "700/1300", 3: "1300/2600", 4: "2000/4000" }, 50: { 1: "400/800", 2: "800/1600", 3: "1600/3200", 4: "2000/4000" }, 60: { 1: "500/1000", 2: "1000/2000", 3: "2000/3900", 4: "2000/4000" }, 70: { 1: "600/1200", 2: "1200/2300", 3: "2000/4000", 4: "2000/4000" }, 80: { 1: "700/1300", 2: "1300/2600", 3: "2000/4000", 4: "2000/4000" }, 90: { 1: "800/1500", 2: "1500/2900", 3: "2000/4000", 4: "2000/4000" }, 100: { 1: "800/1600", 2: "1600/3200", 3: "2000/4000", 4: "2000/4000" }, 110: { 1: "900/1800", 2: "1800/3600", 3: "2000/4000", 4: "2000/4000" } },
@@ -180,10 +173,8 @@
                     const answer = currentScores[fu][han];
                     
                     if (answer === "なし") {
-                        // 斜め1本線のデザインに変更
                         row += `<td><div class="disabled-cell-container"></div></td>`;
                     } else if (answer.includes('/')) {
-                        // 子ツモ用の分割入力（ラベル追加）
                         const [ko, oya] = answer.split('/');
                         row += `
                             <td>
@@ -199,7 +190,6 @@
                             </td>
                         `;
                     } else {
-                        // 通常の入力
                         row += `
                             <td>
                                 <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}" data-ans="${answer}">
@@ -218,7 +208,6 @@
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(t => t.classList.remove('active'));
             element.classList.add('active');
-            // タブ切り替え時に、一番上までスクロールを戻す（親切設計）
             window.scrollTo(0, 0);
             renderTable();
         }
@@ -254,7 +243,6 @@
                         if (isOyaCorrect) inputOya.classList.add('correct');
                         else inputOya.classList.add('incorrect');
 
-                        // 間違っているか、どちらか一方が空欄なら答えを表示
                         if (!isKoCorrect || !isOyaCorrect) {
                             msgEl.innerText = answer;
                         }
@@ -269,7 +257,6 @@
                         if (userAns === normalizedCorrect) {
                             inputEl.classList.add('correct');
                         } else {
-                            // 空欄だった場合も不正解として処理
                             inputEl.classList.add('incorrect');
                             msgEl.innerText = answer;
                         }
