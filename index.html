@@ -2,133 +2,168 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>麻雀点数表アプリ</title>
     <style>
-        /* 横揺れ防止のためのリセットと設定 */
+        /* --- 基礎設定 (横揺れ防止の根本治療) --- */
         * { box-sizing: border-box; }
-        body { font-family: sans-serif; margin: 0; padding: 10px; font-size: 14px; overflow-x: hidden; }
-        h1 { font-size: 18px; text-align: center; }
         
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden; /* HTML/BODYレベルで横揺れをカット */
+            -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかに */
+        }
+
+        /* アプリ全体を囲むコンテナ。ここに余白を持たせる */
+        .app-container {
+            font-family: sans-serif;
+            padding: 10px;
+            font-size: 14px;
+            width: 100%;
+        }
+        
+        h1 { font-size: 18px; text-align: center; margin-top: 5px; margin-bottom: 15px; }
+        
+        /* --- タブのデザイン --- */
         .tabs { display: flex; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
         .tab { padding: 8px 12px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-bottom: none; margin: 2px; border-radius: 5px 5px 0 0; }
         .tab.active { background: #fff; font-weight: bold; border-top: 3px solid #4CAF50; border-bottom: 1px solid #fff; }
         
-        /* 表のコンテナ調整 */
-        .table-container { width: 100%; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; }
-        table { border-collapse: collapse; width: 100%; min-width: 450px; }
-        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: top; }
+        /* --- 表のデザイン --- */
+        .table-container { 
+            width: 100%; 
+            overflow-x: auto; /* 表は横スクロール可能に */
+            margin-bottom: 20px; 
+            padding-bottom: 5px; 
+            border: 1px solid #eee; /* テーブルがはみ出てる感を出す */
+        }
+        table { border-collapse: collapse; width: 100%; min-width: 450px; table-layout: fixed; } /* 列幅を固定 */
+        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: top; height: 50px; }
         th { background-color: #f9f9f9; font-size: 12px; vertical-align: middle; }
         
         /* 入力欄の基本デザイン */
-        input { width: 100%; padding: 10px 2px; font-size: 15px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* 子ツモ用の分割入力デザイン */
-        .split-input { display: flex; align-items: center; justify-content: center; gap: 3px; }
-        .split-input input { width: 45%; }
-        
-        /* 斜め斜線（ストライプ）のデザイン */
-        .disabled-cell { 
+        input { 
             width: 100%; 
-            min-height: 40px; 
-            background: repeating-linear-gradient(45deg, #eee, #eee 10px, #ccc 10px, #ccc 20px); 
+            height: 35px;
+            padding: 0 2px; 
+            font-size: 16px; /* 16px以上にするとiOSでオートズームしない */
+            text-align: center; 
+            border: 1px solid #ccc; 
             border-radius: 4px; 
-            border: 1px solid #bbb;
+            -webkit-appearance: none; /* iOSデフォルトデザインをOFF */
         }
         
-        /* 正解・不正解時の色 */
+        /* --- 存在しないセル（斜め1本線）のデザイン --- */
+        .disabled-cell-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #eee; /* 薄いグレーの背景 */
+            border-radius: 4px;
+        }
+        /* 疑似要素で斜め1本線を引く */
+        .disabled-cell-container::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            /* 左上から右下へ、888色の1pxの線を引くグラデーション */
+            background: linear-gradient(to bottom right, transparent calc(50% - 0.5px), #888 calc(50% - 0.5px), #888 calc(50% + 0.5px), transparent calc(50% + 0.5px));
+            pointer-events: none;
+        }
+
+        /* --- 子ツモ用の分割入力デザイン --- */
+        .tsumo-input-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .split-input { display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%; }
+        .split-input input { width: 45%; }
+        /* 「子 / 親」のラベル */
+        .split-input-label { font-size: 10px; color: #777; margin-top: -1px; }
+        
+        /* --- 正解・不正解時の色 --- */
         .correct { background-color: #c8e6c9; border-color: #4CAF50; }
         .incorrect { background-color: #ffcdd2; border-color: #f44336; }
-        .ans-text { display: block; font-size: 11px; color: #d32f2f; margin-top: 4px; font-weight: bold; min-height: 14px; }
+        .ans-text { display: block; font-size: 11px; color: #d32f2f; margin-top: 4px; font-weight: bold; min-height: 14px; line-height: 1.1; }
         
-        button { display: block; width: 100%; max-width: 300px; margin: 0 auto; padding: 15px; font-size: 18px; font-weight: bold; background-color: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        button:active { transform: translateY(2px); box-shadow: none; }
+        /* --- 答え合わせボタンのデザイン --- */
+        button { 
+            display: block; 
+            width: 100%; 
+            max-width: 300px; 
+            margin: 30px auto 0; /* 上に多めの余白 */
+            padding: 15px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            background-color: #2196F3; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            -webkit-tap-highlight-color: transparent; /* タップ時の青ハイライトをOFF */
+        }
+        button:active { transform: translateY(2px); box-shadow: none; background-color: #1E88E5; }
+
+        /* --- ボタン下の巨大な空き地 (スペーサー) --- */
+        .spacer {
+            height: 60vh; /* 画面高さの60%分の空き地を作る */
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🀄 麻雀点数表トレーニング</h1>
+    <div class="app-container">
+        <h1>🀄 麻雀点数表トレーニング</h1>
 
-    <div class="tabs">
-        <div class="tab active" onclick="changeTab('ko_ron', this)">子ロン</div>
-        <div class="tab" onclick="changeTab('ko_tsumo', this)">子ツモ</div>
-        <div class="tab" onclick="changeTab('oya_ron', this)">親ロン</div>
-        <div class="tab" onclick="changeTab('oya_tsumo', this)">親ツモ</div>
+        <div class="tabs">
+            <div class="tab active" onclick="changeTab('ko_ron', this)">子ロン</div>
+            <div class="tab" onclick="changeTab('ko_tsumo', this)">子ツモ</div>
+            <div class="tab" onclick="changeTab('oya_ron', this)">親ロン</div>
+            <div class="tab" onclick="changeTab('oya_tsumo', this)">親ツモ</div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <colgroup>
+                    <col style="width: 15%;">
+                    <col style="width: 21%;">
+                    <col style="width: 21%;">
+                    <col style="width: 21%;">
+                    <col style="width: 21%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>符/翻</th>
+                        <th>1翻</th>
+                        <th>2翻</th>
+                        <th>3翻</th>
+                        <th>4翻</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <button onclick="checkAnswers()">答え合わせ</button>
+
+        <div class="spacer"></div>
     </div>
-
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>符/翻</th>
-                    <th>1翻</th>
-                    <th>2翻</th>
-                    <th>3翻</th>
-                    <th>4翻</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                </tbody>
-        </table>
-    </div>
-
-    <button onclick="checkAnswers()">答え合わせ</button>
 
     <script>
         // 完全な点数データ
         const scores = {
-            'ko_ron': {
-                20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" },
-                25: { 1: "なし", 2: "1600", 3: "3200", 4: "6400" },
-                30: { 1: "1000", 2: "2000", 3: "3900", 4: "7700" },
-                40: { 1: "1300", 2: "2600", 3: "5200", 4: "8000" },
-                50: { 1: "1600", 2: "3200", 3: "6400", 4: "8000" },
-                60: { 1: "2000", 2: "3900", 3: "7700", 4: "8000" },
-                70: { 1: "2300", 2: "4500", 3: "8000", 4: "8000" },
-                80: { 1: "2600", 2: "5200", 3: "8000", 4: "8000" },
-                90: { 1: "2900", 2: "5800", 3: "8000", 4: "8000" },
-                100: { 1: "3200", 2: "6400", 3: "8000", 4: "8000" },
-                110: { 1: "3600", 2: "7100", 3: "8000", 4: "8000" }
-            },
-            'ko_tsumo': {
-                20: { 1: "なし", 2: "400/700", 3: "700/1300", 4: "1300/2600" },
-                25: { 1: "なし", 2: "なし", 3: "800/1600", 4: "1600/3200" },
-                30: { 1: "300/500", 2: "500/1000", 3: "1000/2000", 4: "2000/3900" },
-                40: { 1: "400/700", 2: "700/1300", 3: "1300/2600", 4: "2000/4000" },
-                50: { 1: "400/800", 2: "800/1600", 3: "1600/3200", 4: "2000/4000" },
-                60: { 1: "500/1000", 2: "1000/2000", 3: "2000/3900", 4: "2000/4000" },
-                70: { 1: "600/1200", 2: "1200/2300", 3: "2000/4000", 4: "2000/4000" },
-                80: { 1: "700/1300", 2: "1300/2600", 3: "2000/4000", 4: "2000/4000" },
-                90: { 1: "800/1500", 2: "1500/2900", 3: "2000/4000", 4: "2000/4000" },
-                100: { 1: "800/1600", 2: "1600/3200", 3: "2000/4000", 4: "2000/4000" },
-                110: { 1: "900/1800", 2: "1800/3600", 3: "2000/4000", 4: "2000/4000" }
-            },
-            'oya_ron': {
-                20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" },
-                25: { 1: "なし", 2: "2400", 3: "4800", 4: "9600" },
-                30: { 1: "1500", 2: "2900", 3: "5800", 4: "11600" },
-                40: { 1: "2000", 2: "3900", 3: "7700", 4: "12000" },
-                50: { 1: "2400", 2: "4800", 3: "9600", 4: "12000" },
-                60: { 1: "2900", 2: "5800", 3: "11600", 4: "12000" },
-                70: { 1: "3400", 2: "6800", 3: "12000", 4: "12000" },
-                80: { 1: "3900", 2: "7700", 3: "12000", 4: "12000" },
-                90: { 1: "4400", 2: "8700", 3: "12000", 4: "12000" },
-                100: { 1: "4800", 2: "9600", 3: "12000", 4: "12000" },
-                110: { 1: "5300", 2: "10600", 3: "12000", 4: "12000" }
-            },
-            'oya_tsumo': {
-                20: { 1: "なし", 2: "700ALL", 3: "1300ALL", 4: "2600ALL" },
-                25: { 1: "なし", 2: "なし", 3: "1600ALL", 4: "3200ALL" },
-                30: { 1: "500ALL", 2: "1000ALL", 3: "2000ALL", 4: "3900ALL" },
-                40: { 1: "700ALL", 2: "1300ALL", 3: "2600ALL", 4: "4000ALL" },
-                50: { 1: "800ALL", 2: "1600ALL", 3: "3200ALL", 4: "4000ALL" },
-                60: { 1: "1000ALL", 2: "2000ALL", 3: "3900ALL", 4: "4000ALL" },
-                70: { 1: "1200ALL", 2: "2300ALL", 3: "4000ALL", 4: "4000ALL" },
-                80: { 1: "1300ALL", 2: "2600ALL", 3: "4000ALL", 4: "4000ALL" },
-                90: { 1: "1500ALL", 2: "2900ALL", 3: "4000ALL", 4: "4000ALL" },
-                100: { 1: "1600ALL", 2: "3200ALL", 3: "4000ALL", 4: "4000ALL" },
-                110: { 1: "1800ALL", 2: "3600ALL", 3: "4000ALL", 4: "4000ALL" }
-            }
+            'ko_ron': { 20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" }, 25: { 1: "なし", 2: "1600", 3: "3200", 4: "6400" }, 30: { 1: "1000", 2: "2000", 3: "3900", 4: "7700" }, 40: { 1: "1300", 2: "2600", 3: "5200", 4: "8000" }, 50: { 1: "1600", 2: "3200", 3: "6400", 4: "8000" }, 60: { 1: "2000", 2: "3900", 3: "7700", 4: "8000" }, 70: { 1: "2300", 2: "4500", 3: "8000", 4: "8000" }, 80: { 1: "2600", 2: "5200", 3: "8000", 4: "8000" }, 90: { 1: "2900", 2: "5800", 3: "8000", 4: "8000" }, 100: { 1: "3200", 2: "6400", 3: "8000", 4: "8000" }, 110: { 1: "3600", 2: "7100", 3: "8000", 4: "8000" } },
+            'ko_tsumo': { 20: { 1: "なし", 2: "400/700", 3: "700/1300", 4: "1300/2600" }, 25: { 1: "なし", 2: "なし", 3: "800/1600", 4: "1600/3200" }, 30: { 1: "300/500", 2: "500/1000", 3: "1000/2000", 4: "2000/3900" }, 40: { 1: "400/700", 2: "700/1300", 3: "1300/2600", 4: "2000/4000" }, 50: { 1: "400/800", 2: "800/1600", 3: "1600/3200", 4: "2000/4000" }, 60: { 1: "500/1000", 2: "1000/2000", 3: "2000/3900", 4: "2000/4000" }, 70: { 1: "600/1200", 2: "1200/2300", 3: "2000/4000", 4: "2000/4000" }, 80: { 1: "700/1300", 2: "1300/2600", 3: "2000/4000", 4: "2000/4000" }, 90: { 1: "800/1500", 2: "1500/2900", 3: "2000/4000", 4: "2000/4000" }, 100: { 1: "800/1600", 2: "1600/3200", 3: "2000/4000", 4: "2000/4000" }, 110: { 1: "900/1800", 2: "1800/3600", 3: "2000/4000", 4: "2000/4000" } },
+            'oya_ron': { 20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" }, 25: { 1: "なし", 2: "2400", 3: "4800", 4: "9600" }, 30: { 1: "1500", 2: "2900", 3: "5800", 4: "11600" }, 40: { 1: "2000", 2: "3900", 3: "7700", 4: "12000" }, 50: { 1: "2400", 2: "4800", 3: "9600", 4: "12000" }, 60: { 1: "2900", 2: "5800", 3: "11600", 4: "12000" }, 70: { 1: "3400", 2: "6800", 3: "12000", 4: "12000" }, 80: { 1: "3900", 2: "7700", 3: "12000", 4: "12000" }, 90: { 1: "4400", 2: "8700", 3: "12000", 4: "12000" }, 100: { 1: "4800", 2: "9600", 3: "12000", 4: "12000" }, 110: { 1: "5300", 2: "10600", 3: "12000", 4: "12000" } },
+            'oya_tsumo': { 20: { 1: "なし", 2: "700ALL", 3: "1300ALL", 4: "2600ALL" }, 25: { 1: "なし", 2: "なし", 3: "1600ALL", 4: "3200ALL" }, 30: { 1: "500ALL", 2: "1000ALL", 3: "2000ALL", 4: "3900ALL" }, 40: { 1: "700ALL", 2: "1300ALL", 3: "2600ALL", 4: "4000ALL" }, 50: { 1: "800ALL", 2: "1600ALL", 3: "3200ALL", 4: "4000ALL" }, 60: { 1: "1000ALL", 2: "2000ALL", 3: "3900ALL", 4: "4000ALL" }, 70: { 1: "1200ALL", 2: "2300ALL", 3: "4000ALL", 4: "4000ALL" }, 80: { 1: "1300ALL", 2: "2600ALL", 3: "4000ALL", 4: "4000ALL" }, 90: { 1: "1500ALL", 2: "2900ALL", 3: "4000ALL", 4: "4000ALL" }, 100: { 1: "1600ALL", 2: "3200ALL", 3: "4000ALL", 4: "4000ALL" }, 110: { 1: "1800ALL", 2: "3600ALL", 3: "4000ALL", 4: "4000ALL" } }
         };
 
         let currentTab = 'ko_ron';
@@ -145,23 +180,26 @@
                     const answer = currentScores[fu][han];
                     
                     if (answer === "なし") {
-                        // 斜めストライプのdivを表示
-                        row += `<td><div class="disabled-cell"></div></td>`;
+                        // 斜め1本線のデザインに変更
+                        row += `<td><div class="disabled-cell-container"></div></td>`;
                     } else if (answer.includes('/')) {
-                        // 子ツモ用の分割入力 (例: "400/700" -> ko: 400, oya: 700)
+                        // 子ツモ用の分割入力（ラベル追加）
                         const [ko, oya] = answer.split('/');
                         row += `
                             <td>
-                                <div class="split-input">
-                                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-ko" data-ans="${ko}">
-                                    <span>/</span>
-                                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-oya" data-ans="${oya}">
+                                <div class="tsumo-input-wrap">
+                                    <div class="split-input">
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-ko" data-ans="${ko}">
+                                        <span>/</span>
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-oya" data-ans="${oya}">
+                                    </div>
+                                    <div class="split-input-label">子 / 親</div>
                                 </div>
                                 <span id="msg-${fu}-${han}" class="ans-text"></span>
                             </td>
                         `;
                     } else {
-                        // 通常の入力（ロン、親ツモ）
+                        // 通常の入力
                         row += `
                             <td>
                                 <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}" data-ans="${answer}">
@@ -180,6 +218,8 @@
             const tabs = document.querySelectorAll('.tab');
             tabs.forEach(t => t.classList.remove('active'));
             element.classList.add('active');
+            // タブ切り替え時に、一番上までスクロールを戻す（親切設計）
+            window.scrollTo(0, 0);
             renderTable();
         }
 
@@ -192,10 +232,9 @@
                     if (answer === "なし") continue;
 
                     const msgEl = document.getElementById(`msg-${fu}-${han}`);
-                    msgEl.innerText = ''; // メッセージリセット
+                    msgEl.innerText = '';
 
                     if (answer.includes('/')) {
-                        // --- 子ツモ（分割）の判定 ---
                         const [koAns, oyaAns] = answer.split('/');
                         const inputKo = document.getElementById(`input-${fu}-${han}-ko`);
                         const inputOya = document.getElementById(`input-${fu}-${han}-oya`);
@@ -206,24 +245,21 @@
                         const userKo = inputKo.value.trim().replace(/[^0-9]/g, '');
                         const userOya = inputOya.value.trim().replace(/[^0-9]/g, '');
 
-                        // それぞれ正解か判定
                         const isKoCorrect = (userKo === koAns);
                         const isOyaCorrect = (userOya === oyaAns);
 
-                        // 色を反映
                         if (isKoCorrect) inputKo.classList.add('correct');
                         else inputKo.classList.add('incorrect');
 
                         if (isOyaCorrect) inputOya.classList.add('correct');
                         else inputOya.classList.add('incorrect');
 
-                        // どちらか一方でも空欄、または間違えていたら答えを表示
+                        // 間違っているか、どちらか一方が空欄なら答えを表示
                         if (!isKoCorrect || !isOyaCorrect) {
                             msgEl.innerText = answer;
                         }
 
                     } else {
-                        // --- 通常の判定 ---
                         const inputEl = document.getElementById(`input-${fu}-${han}`);
                         inputEl.classList.remove('correct', 'incorrect');
                         
@@ -233,7 +269,7 @@
                         if (userAns === normalizedCorrect) {
                             inputEl.classList.add('correct');
                         } else {
-                            // 空欄だった場合も不正解(赤色)として処理し、答えを表示する
+                            // 空欄だった場合も不正解として処理
                             inputEl.classList.add('incorrect');
                             msgEl.innerText = answer;
                         }
@@ -242,7 +278,6 @@
             }
         }
 
-        // 初期表示
         renderTable();
     </script>
 </body>
