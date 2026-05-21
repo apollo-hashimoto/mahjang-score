@@ -5,28 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>麻雀点数表アプリ</title>
     <style>
-        body { font-family: sans-serif; padding: 10px; font-size: 14px; }
+        /* 横揺れ防止のためのリセットと設定 */
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; margin: 0; padding: 10px; font-size: 14px; overflow-x: hidden; }
         h1 { font-size: 18px; text-align: center; }
         
         .tabs { display: flex; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
         .tab { padding: 8px 12px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-bottom: none; margin: 2px; border-radius: 5px 5px 0 0; }
         .tab.active { background: #fff; font-weight: bold; border-top: 3px solid #4CAF50; border-bottom: 1px solid #fff; }
         
-        /* 表が画面からはみ出さないようにスクロール可能にする */
-        .table-container { overflow-x: auto; margin-bottom: 20px; }
-        table { border-collapse: collapse; width: 100%; min-width: 400px; }
-        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; }
-        th { background-color: #f9f9f9; font-size: 12px; }
+        /* 表のコンテナ調整 */
+        .table-container { width: 100%; overflow-x: auto; margin-bottom: 20px; padding-bottom: 5px; }
+        table { border-collapse: collapse; width: 100%; min-width: 450px; }
+        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; vertical-align: top; }
+        th { background-color: #f9f9f9; font-size: 12px; vertical-align: middle; }
         
-        /* 入力欄のサイズ調整 */
-        input { width: 100%; box-sizing: border-box; padding: 10px 5px; font-size: 16px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        /* 入力欄の基本デザイン */
+        input { width: 100%; padding: 10px 2px; font-size: 15px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* 「なし」のセルのデザイン */
-        .disabled-cell { background-color: #e0e0e0; pointer-events: none; border-color: #ccc; }
+        /* 子ツモ用の分割入力デザイン */
+        .split-input { display: flex; align-items: center; justify-content: center; gap: 3px; }
+        .split-input input { width: 45%; }
         
+        /* 斜め斜線（ストライプ）のデザイン */
+        .disabled-cell { 
+            width: 100%; 
+            min-height: 40px; 
+            background: repeating-linear-gradient(45deg, #eee, #eee 10px, #ccc 10px, #ccc 20px); 
+            border-radius: 4px; 
+            border: 1px solid #bbb;
+        }
+        
+        /* 正解・不正解時の色 */
         .correct { background-color: #c8e6c9; border-color: #4CAF50; }
         .incorrect { background-color: #ffcdd2; border-color: #f44336; }
-        .ans-text { display: block; font-size: 11px; color: #d32f2f; margin-top: 2px; font-weight: bold; min-height: 14px;}
+        .ans-text { display: block; font-size: 11px; color: #d32f2f; margin-top: 4px; font-weight: bold; min-height: 14px; }
         
         button { display: block; width: 100%; max-width: 300px; margin: 0 auto; padding: 15px; font-size: 18px; font-weight: bold; background-color: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         button:active { transform: translateY(2px); box-shadow: none; }
@@ -62,7 +75,7 @@
     <button onclick="checkAnswers()">答え合わせ</button>
 
     <script>
-        // 満貫をすべて数値化し、完全なデータに更新
+        // 完全な点数データ
         const scores = {
             'ko_ron': {
                 20: { 1: "なし", 2: "なし", 3: "なし", 4: "なし" },
@@ -132,10 +145,23 @@
                     const answer = currentScores[fu][han];
                     
                     if (answer === "なし") {
-                        // 「なし」の場合はグレーにして入力を無効化
-                        row += `<td><input type="text" class="disabled-cell" disabled></td>`;
+                        // 斜めストライプのdivを表示
+                        row += `<td><div class="disabled-cell"></div></td>`;
+                    } else if (answer.includes('/')) {
+                        // 子ツモ用の分割入力 (例: "400/700" -> ko: 400, oya: 700)
+                        const [ko, oya] = answer.split('/');
+                        row += `
+                            <td>
+                                <div class="split-input">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-ko" data-ans="${ko}">
+                                    <span>/</span>
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}-oya" data-ans="${oya}">
+                                </div>
+                                <span id="msg-${fu}-${han}" class="ans-text"></span>
+                            </td>
+                        `;
                     } else {
-                        // inputmode="numeric" pattern="[0-9]*" でスマホの数字キーボードを強制呼び出し
+                        // 通常の入力（ロン、親ツモ）
                         row += `
                             <td>
                                 <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-${fu}-${han}" data-ans="${answer}">
@@ -163,33 +189,60 @@
             for (const fu in currentScores) {
                 for (let han = 1; han <= 4; han++) {
                     const answer = currentScores[fu][han];
-                    if (answer === "なし") continue; // 「なし」は判定スキップ
+                    if (answer === "なし") continue;
 
-                    const inputEl = document.getElementById(`input-${fu}-${han}`);
                     const msgEl = document.getElementById(`msg-${fu}-${han}`);
-                    const correctAns = inputEl.getAttribute('data-ans');
-                    const userAns = inputEl.value.trim();
+                    msgEl.innerText = ''; // メッセージリセット
 
-                    inputEl.classList.remove('correct', 'incorrect');
-                    msgEl.innerText = '';
+                    if (answer.includes('/')) {
+                        // --- 子ツモ（分割）の判定 ---
+                        const [koAns, oyaAns] = answer.split('/');
+                        const inputKo = document.getElementById(`input-${fu}-${han}-ko`);
+                        const inputOya = document.getElementById(`input-${fu}-${han}-oya`);
+                        
+                        inputKo.classList.remove('correct', 'incorrect');
+                        inputOya.classList.remove('correct', 'incorrect');
 
-                    if (userAns === "") continue;
+                        const userKo = inputKo.value.trim().replace(/[^0-9]/g, '');
+                        const userOya = inputOya.value.trim().replace(/[^0-9]/g, '');
 
-                    // ★スマート入力判定：入力と答えの両方から「数字以外（/やALL）」を取り除いて比較
-                    // これにより、「400/700」の答えに対して「400700」と入力するだけで正解になる
-                    const normalizedCorrect = correctAns.replace(/[^0-9]/g, '');
-                    const normalizedUser = userAns.replace(/[^0-9]/g, '');
+                        // それぞれ正解か判定
+                        const isKoCorrect = (userKo === koAns);
+                        const isOyaCorrect = (userOya === oyaAns);
 
-                    if (normalizedUser === normalizedCorrect) {
-                        inputEl.classList.add('correct');
+                        // 色を反映
+                        if (isKoCorrect) inputKo.classList.add('correct');
+                        else inputKo.classList.add('incorrect');
+
+                        if (isOyaCorrect) inputOya.classList.add('correct');
+                        else inputOya.classList.add('incorrect');
+
+                        // どちらか一方でも空欄、または間違えていたら答えを表示
+                        if (!isKoCorrect || !isOyaCorrect) {
+                            msgEl.innerText = answer;
+                        }
+
                     } else {
-                        inputEl.classList.add('incorrect');
-                        msgEl.innerText = correctAns; // 不正解時は元の綺麗な形式(400/700など)で表示
+                        // --- 通常の判定 ---
+                        const inputEl = document.getElementById(`input-${fu}-${han}`);
+                        inputEl.classList.remove('correct', 'incorrect');
+                        
+                        const userAns = inputEl.value.trim().replace(/[^0-9]/g, '');
+                        const normalizedCorrect = answer.replace(/[^0-9]/g, '');
+
+                        if (userAns === normalizedCorrect) {
+                            inputEl.classList.add('correct');
+                        } else {
+                            // 空欄だった場合も不正解(赤色)として処理し、答えを表示する
+                            inputEl.classList.add('incorrect');
+                            msgEl.innerText = answer;
+                        }
                     }
                 }
             }
         }
 
+        // 初期表示
         renderTable();
     </script>
 </body>
