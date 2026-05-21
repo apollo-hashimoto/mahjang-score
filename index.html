@@ -13,14 +13,19 @@
             width: 100%;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            background-color: #f5f5f5; /* PCで見た時に背景とアプリの境目がわかりやすいように少し色付け */
         }
 
-        /* 画面の端ギリギリまで表を広げるために余白を小さく */
+        /* ★ここを変更！最大幅を設定して中央寄せ */
         .app-container {
             font-family: sans-serif;
             padding: 4px;
             font-size: 14px;
             width: 100%;
+            max-width: 600px; /* PC版での最大幅を固定 */
+            margin: 0 auto;   /* 画面の中央に配置し、左右に余白を作る */
+            background-color: #ffffff; /* アプリ部分の背景を白に */
+            min-height: 100vh; /* 縦幅を最低でも画面いっぱいに */
         }
         
         h1 { font-size: 16px; text-align: center; margin-top: 5px; margin-bottom: 10px; }
@@ -29,20 +34,16 @@
         .tab { padding: 8px 10px; font-size: 13px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-bottom: none; margin: 2px; border-radius: 5px 5px 0 0; }
         .tab.active { background: #fff; font-weight: bold; border-top: 3px solid #4CAF50; border-bottom: 1px solid #fff; }
         
-        /* 表が横スクロールしないように設定を変更 */
         .table-container { 
             width: 100%; 
             margin-bottom: 20px; 
         }
         
-        /* 画面幅に強制的に合わせる（min-widthを削除） */
         table { border-collapse: collapse; width: 100%; table-layout: fixed; } 
         
-        /* セル内の余白を極限まで削ってスペースを確保 */
         th, td { border: 1px solid #aaa; padding: 1px; text-align: center; vertical-align: top; height: 45px; }
         th { background-color: #f9f9f9; font-size: 10px; vertical-align: middle; }
         
-        /* 入力欄の文字サイズと余白を小さくして収める */
         input { 
             width: 100%; 
             height: 35px;
@@ -76,9 +77,8 @@
             align-items: center;
             gap: 0;
         }
-        /* 子ツモのスキマをさらに削る */
         .split-input { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-        .split-input input { width: 47%; font-size: 12px; } /* 分割時はさらに文字を少し小さく */
+        .split-input input { width: 47%; font-size: 12px; } 
         .split-input span { font-size: 10px; }
         
         .split-input-label { font-size: 9px; color: #777; margin-top: 1px; transform: scale(0.9); }
